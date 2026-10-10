@@ -9,10 +9,29 @@ jobs:
   sync_latest_from_upstream:
     name: Sync latest commits from upstream repo
     runs-on: ubuntu-latest
-    if: ${{ github.event.repository.fork }}
+    permissions:
+      contents: write
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
       - name: Sync upstream changes
-        run: gh repo sync ${{ github.repository }} --source dreamhunter2333/cloudflare_temp_email --branch main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add upstream https://github.com/dreamhunter2333/cloudflare_temp_email.git
+          git fetch upstream main --depth=1
+          if git merge --no-edit upstream/main; then
+            echo "Merged upstream changes"
+            git push origin main
+            echo "Pushed to origin"
+          else
+            echo "Merge conflict detected, aborting merge"
+            git merge --abort || true
+            exit 1
+          fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
